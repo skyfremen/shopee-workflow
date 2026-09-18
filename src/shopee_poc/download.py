@@ -4,6 +4,7 @@ import hashlib
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
 
 import httpx
 
@@ -52,6 +53,39 @@ def _download_mp4(
                     output.write(chunk)
 
 
+def _assert_unencrypted_hls(
+    client: httpx.Client,
+    playlist_url: str,
+) -> None:
+    pending = [playlist_url]
+    visited: set[str] = set()
+
+    while pending:
+        current_url = pending.pop()
+        if current_url in visited:
+            continue
+        visited.add(current_url)
+
+        if len(visited) > 20:
+            raise UnsupportedMediaError("HLS playlist graph is too large for the PoC")
+
+        response = client.get(current_url)
+        response.raise_for_status()
+        text = response.text.upper()
+
+        if "#EXT-X-KEY" in text or "#EXT-X-SESSION-KEY" in text:
+            raise UnsupportedMediaError("encrypted HLS is not supported")
+
+        for raw_line in response.text.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            child_url = urljoin(current_url, line)
+            if urlparse(child_url).path.lower().endswith(".m3u8"):
+                pending.append(child_url)
+
+
 def _download_hls(
     url: str,
     output_path: Path,
@@ -62,11 +96,7 @@ def _download_hls(
         follow_redirects=True,
         timeout=60.0,
     ) as client:
-        playlist = client.get(url)
-        playlist.raise_for_status()
-
-    if "#EXT-X-KEY" in playlist.text.upper():
-        raise UnsupportedMediaError("encrypted HLS is not supported")
+        _assert_unencrypted_hls(client, url)
 
     ffmpeg_headers = "".join(
         f"{name}: {value}\r\n"
