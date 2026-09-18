@@ -41,6 +41,8 @@ This PoC is intentionally narrow. It is a media-extraction experiment, not a gen
 - Automated reposting/uploading.
 - Long-term storage in Git.
 - Affiliate/API integration.
+- Unit-test suite.
+- README/documentation beyond this design spec.
 
 If normal public access is blocked, the run fails with a useful diagnostic rather than attempting to bypass the restriction.
 
@@ -100,16 +102,12 @@ shopee-workflow/
 │       ├── browser.py
 │       ├── media.py
 │       └── download.py
-├── tests/
-│   ├── test_media.py
-│   └── test_url_validation.py
 ├── docs/
 │   └── superpowers/
 │       └── specs/
 │           └── 2026-09-18-shopee-video-poc-design.md
 ├── requirements.txt
-├── .gitignore
-└── README.md
+└── .gitignore
 ```
 
 ## Component responsibilities
@@ -152,8 +150,6 @@ Normalizes and ranks candidates. Initial preference:
 3. Unsupported candidates are ignored.
 
 Duplicate URLs are collapsed.
-
-Because this module is pure logic, most PoC behavior can be unit tested without contacting Shopee.
 
 ### `download.py`
 
@@ -201,8 +197,6 @@ install Playwright Chromium
        |
 verify FFmpeg
        |
-run unit tests
-       |
 run PoC downloader
        |
 upload output/ as artifact
@@ -223,19 +217,11 @@ The CLI will use distinct failure reasons so workflow logs remain useful:
 
 When practical, a small diagnostic JSON file should still be written and uploaded on failure. The PoC should not store page cookies or secrets in diagnostics.
 
-## Testing
+## PoC validation
 
-Unit tests cover:
+There is no unit-test suite in this PoC.
 
-- Shopee URL validation.
-- Candidate de-duplication.
-- MP4 preference over HLS.
-- Rejection of unrelated response types.
-- Media type classification.
-
-The live GitHub Action is the integration test. A successful run must produce an artifact containing `video.mp4` and `metadata.json`.
-
-Tests will not attempt to defeat a CAPTCHA or site restriction.
+The live GitHub Action is the validation mechanism. A successful run must produce an artifact containing `video.mp4` and `metadata.json`.
 
 ## PoC success criteria
 
@@ -243,11 +229,10 @@ The PoC is successful when all of the following are true:
 
 1. A user can manually trigger the workflow with one public Shopee URL.
 2. The workflow runs entirely on `ubuntu-latest`.
-3. At least one test URL that exposes ordinary media can produce a playable `video.mp4`.
+3. At least one public URL exposing ordinary media can produce a playable `video.mp4`.
 4. `metadata.json` records the originating page URL, selected media URL/type, file size, timestamp, and SHA-256.
 5. The result is available as a GitHub Actions artifact.
 6. A blocked, challenged, or media-less page fails cleanly without bypass behavior.
-7. Unit tests pass before live extraction runs.
 
 ## Future phases, only after PoC validation
 
