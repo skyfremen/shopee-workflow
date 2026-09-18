@@ -13,7 +13,7 @@ _BLOCK_INDICATORS = (
     "verify you are human",
     "access denied",
     "unusual traffic",
-    "robot",
+    "are you a robot",\n    "robot check",
 )
 
 
